@@ -48,3 +48,6 @@ cargo clippy --no-default-features --features std
 cargo clippy --no-default-features --features crc64
 cargo clippy --no-default-features --features bcj
 cargo clippy --no-default-features --features sha256
+
+# Run bench just to make sure I didnt break it!
+cargo +nightly bench

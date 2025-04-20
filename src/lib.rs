@@ -1,4 +1,5 @@
-//! ba
+//! # xz-rs
+//! Memory safe pure Rust no-std & no alloc XZ decoder
 #![no_std]
 #![cfg_attr(feature = "no_unsafe", deny(unsafe_code))]
 #![deny(

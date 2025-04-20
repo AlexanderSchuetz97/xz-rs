@@ -6,7 +6,7 @@ license = "MIT"
 authors = ["Alexander Schütz <aschuetz@protonmail.com>"]
 keywords = ["xz", "lzma", "compression", "no-std"]
 categories = ["compression", "no-std", "no-std::no-alloc"]
-description = "Memory Safe pure Rust no-std & no alloc XZ decoder"
+description = "Memory safe pure Rust no-std & no alloc XZ decoder"
 readme = "README.md"
 repository = "https://github.com/AlexanderSchuetz97/xz-rs"
 exclude = [
@@ -18,6 +18,9 @@ exclude = [
     "test.sh",
     "tests/*"
 ]
+
+[package.metadata.docs.rs]
+all-features = true
 
 [features]
 default = ["alloc", "std", "bcj", "sha256", "crc64"]

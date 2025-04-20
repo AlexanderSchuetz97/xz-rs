@@ -1,8 +1,6 @@
 #[cfg(feature = "bcj")]
 use crate::bcj::BcjFilterState;
-use crate::clamp::{
-    clamp_u32_to_u16, clamp_u32_to_u8, clamp_u64_to_u32, clamp_us_to_u32,
-};
+use crate::clamp::{clamp_u32_to_u16, clamp_u32_to_u8, clamp_u64_to_u32, clamp_us_to_u32};
 use crate::crc32::crc32;
 #[cfg(feature = "sha256")]
 use crate::sha256::XzSha256;
@@ -222,11 +220,7 @@ impl XzLzma2Decoder {
     }
 
     /// reset lzma decoder.
-    fn xz_dec_lzma2_reset(
-        &mut self,
-        props: u8,
-        d: &mut XzDictBuffer,
-    ) -> Result<(), XzError> {
+    fn xz_dec_lzma2_reset(&mut self, props: u8, d: &mut XzDictBuffer) -> Result<(), XzError> {
         if props > 39 {
             return Err(XzError::UnsupportedLzmaProperties(u32::from(props)));
         }
@@ -243,7 +237,6 @@ impl XzLzma2Decoder {
         self.temp_size = 0;
         Ok(())
     }
-
 
     /// main lzma2 decoding loop
     fn lzma_main(&mut self, rcb: &mut RcBuf, d: &mut XzDictBuffer) -> Result<(), XzError> {
@@ -263,7 +256,10 @@ impl XzLzma2Decoder {
                 continue;
             }
 
-            if self.rc.rc_bit(&mut self.lzma.is_rep[self.lzma.state as usize], rcb) {
+            if self
+                .rc
+                .rc_bit(&mut self.lzma.is_rep[self.lzma.state as usize], rcb)
+            {
                 self.lzma_match(clamp_us_to_u32(pos_state), rcb);
             } else {
                 self.lzma_rep_match(clamp_us_to_u32(pos_state), rcb);
@@ -276,11 +272,7 @@ impl XzLzma2Decoder {
     }
 
     /// call the lzma2 decoder.
-    fn lzma2_lzma(
-        &mut self,
-        b: &mut XzInOutBuffer,
-        d: &mut XzDictBuffer,
-    ) -> Result<(), XzError> {
+    fn lzma2_lzma(&mut self, b: &mut XzInOutBuffer, d: &mut XzDictBuffer) -> Result<(), XzError> {
         let mut in_avail = b.in_size().wrapping_sub(b.input_pos);
         if self.temp_size > 0 || self.compressed == 0 {
             //TODO unreached.
@@ -374,7 +366,6 @@ impl XzLzma2Decoder {
         }
         Ok(())
     }
-
 
     /// process the lzma decoders state machine.
     #[allow(clippy::too_many_lines)]
@@ -1243,9 +1234,6 @@ impl RcDecoder {
     }
 }
 
-
-
-
 /// Holds the actual buffer allocation.
 #[derive(Debug)]
 enum XzDictBufferAllocation<'a> {
@@ -1751,7 +1739,7 @@ pub enum XzError {
     DeltaFilterUnsupported,
 
     ContentCrc32Mismatch(u32, u32), //Actual, Excepted
-    IndexCrc32Mismatch(u32, u32), //Actual, Excepted
+    IndexCrc32Mismatch(u32, u32),   //Actual, Excepted
     #[cfg(feature = "crc64")]
     ContentCrc64Mismatch(u64, u64), //Actual, Excepted
 
@@ -2251,7 +2239,6 @@ impl XzInnerDecoder {
         }
     }
 
-
     /// Updates the size and crc32 of the index.
     fn index_update(&mut self, b: &mut XzInOutBuffer, in_start: usize) {
         let position = b.input_position();
@@ -2340,7 +2327,6 @@ impl XzInnerDecoder {
         }
         Ok(())
     }
-
 
     /// decodes a block header from the stream.
     fn dec_block_header(&mut self, d: &mut XzDictBuffer) -> Result<(), XzError> {
@@ -2532,7 +2518,8 @@ impl XzInnerDecoder {
         }
 
         if ret == DecodeResult::EndOfDataStructure {
-            if self.block_header.compressed != u64::MAX && self.block_header.compressed != self.block.compressed
+            if self.block_header.compressed != u64::MAX
+                && self.block_header.compressed != self.block.compressed
             {
                 return Err(XzError::LessDataInBlockBodyThanHeaderIndicated);
             }
@@ -2541,18 +2528,21 @@ impl XzInnerDecoder {
             {
                 return Err(XzError::LessDataInBlockBodyThanHeaderIndicated);
             }
-            self.block.hash.unpadded = self
-                .block
-                .hash
-                .unpadded
-                .wrapping_add((self.block_header.size as u64).wrapping_add(self.block.compressed));
+            self.block.hash.unpadded =
+                self.block.hash.unpadded.wrapping_add(
+                    (self.block_header.size as u64).wrapping_add(self.block.compressed),
+                );
 
             self.block.hash.unpadded = self
                 .block
                 .hash
                 .unpadded
                 .wrapping_add(self.check_type.check_size() as u64);
-            self.block.hash.uncompressed = self.block.hash.uncompressed.wrapping_add(self.block.uncompressed);
+            self.block.hash.uncompressed = self
+                .block
+                .hash
+                .uncompressed
+                .wrapping_add(self.block.uncompressed);
             self.block.hash.calculate_crc32();
             self.block.count = self.block.count.wrapping_add(1);
             return Ok(DecodeResult::EndOfDataStructure);
@@ -2560,8 +2550,6 @@ impl XzInnerDecoder {
 
         Ok(ret)
     }
-
-
 
     /// main decoder loop
     #[allow(clippy::too_many_lines)]
@@ -2630,13 +2618,21 @@ impl XzInnerDecoder {
                                 return Ok(DecodeResult::NeedMoreData);
                             }
 
-                            let expected_crc = u32::from_le_bytes([self.temp.buf[0], self.temp.buf[1], self.temp.buf[2], self.temp.buf[3]]);
+                            let expected_crc = u32::from_le_bytes([
+                                self.temp.buf[0],
+                                self.temp.buf[1],
+                                self.temp.buf[2],
+                                self.temp.buf[3],
+                            ]);
                             let actual_crc = clamp_u64_to_u32(self.crc);
-                            if expected_crc != actual_crc  {
-                                return Err(XzError::ContentCrc32Mismatch(actual_crc, expected_crc));
+                            if expected_crc != actual_crc {
+                                return Err(XzError::ContentCrc32Mismatch(
+                                    actual_crc,
+                                    expected_crc,
+                                ));
                             }
                             self.crc = 0;
-                        },
+                        }
                         #[cfg(feature = "crc64")]
                         XzCheckType::Crc64 => {
                             self.temp.size = 8;
@@ -2644,12 +2640,21 @@ impl XzInnerDecoder {
                                 return Ok(DecodeResult::NeedMoreData);
                             }
 
-                            let expected_crc = u64::from_le_bytes([self.temp.buf[0], self.temp.buf[1], self.temp.buf[2], self.temp.buf[3], self.temp.buf[4], self.temp.buf[5], self.temp.buf[6], self.temp.buf[7]]);
+                            let expected_crc = u64::from_le_bytes([
+                                self.temp.buf[0],
+                                self.temp.buf[1],
+                                self.temp.buf[2],
+                                self.temp.buf[3],
+                                self.temp.buf[4],
+                                self.temp.buf[5],
+                                self.temp.buf[6],
+                                self.temp.buf[7],
+                            ]);
                             if expected_crc != self.crc {
                                 return Err(XzError::ContentCrc64Mismatch(self.crc, expected_crc));
                             }
                             self.crc = 0;
-                        },
+                        }
                         #[cfg(feature = "sha256")]
                         XzCheckType::Sha256 => {
                             self.temp.size = 32;
@@ -2671,7 +2676,13 @@ impl XzInnerDecoder {
                     self.state = XzDecoderState::IndexPadding;
                 }
                 XzDecoderState::IndexPadding => {
-                    while self.index.size.wrapping_add((b.input_pos - in_start) as u64) & 3 != 0 {
+                    while self
+                        .index
+                        .size
+                        .wrapping_add((b.input_pos - in_start) as u64)
+                        & 3
+                        != 0
+                    {
                         let Some(next_byte) = b.input_read_byte::<u8>() else {
                             self.index_update(b, in_start);
                             return Ok(DecodeResult::NeedMoreData);
@@ -2692,9 +2703,14 @@ impl XzInnerDecoder {
                         return Ok(DecodeResult::NeedMoreData);
                     }
 
-                    let expected_crc = u32::from_le_bytes([self.temp.buf[0], self.temp.buf[1], self.temp.buf[2], self.temp.buf[3]]);
+                    let expected_crc = u32::from_le_bytes([
+                        self.temp.buf[0],
+                        self.temp.buf[1],
+                        self.temp.buf[2],
+                        self.temp.buf[3],
+                    ]);
                     let actual_crc = clamp_u64_to_u32(self.crc);
-                    if expected_crc != actual_crc  {
+                    if expected_crc != actual_crc {
                         return Err(XzError::IndexCrc32Mismatch(actual_crc, expected_crc));
                     }
                     self.crc = 0;
@@ -2714,7 +2730,6 @@ impl XzInnerDecoder {
             }
         }
     }
-
 
     /// Determine if a more output or input buffer result should trigger error or not.
     fn should_buffer_error(&mut self, buf: &XzInOutBuffer) -> bool {
@@ -2756,7 +2771,10 @@ impl XzInnerDecoder {
         }
 
         let mut buf = XzInOutBuffer::new(input_data, output_data);
-        match self.dec_main(&mut buf, d).inspect_err(|_| self.needs_reset = true)? {
+        match self
+            .dec_main(&mut buf, d)
+            .inspect_err(|_| self.needs_reset = true)?
+        {
             DecodeResult::NeedMoreData => {
                 if self.should_buffer_error(&buf) {
                     return Err(XzError::NeedsLargerInputBuffer);
@@ -3120,4 +3138,3 @@ pub enum DecodeResult {
     /// Decoder made progress and a data structure is fully read
     EndOfDataStructure = 1,
 }
-

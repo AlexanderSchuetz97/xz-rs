@@ -416,7 +416,10 @@ fn t34() {
         assert_eq!(e, XzError::ContentCrc32Mismatch(362980163, 346202947))
     });
     run_test_expect_error(include_bytes!("../test_files/bad-1-check-crc64.xz"), |e| {
-        assert_eq!(e, XzError::ContentCrc64Mismatch(14597925186004594415, 14669982780042522351))
+        assert_eq!(
+            e,
+            XzError::ContentCrc64Mismatch(14597925186004594415, 14669982780042522351)
+        )
     });
     run_test_expect_error(include_bytes!("../test_files/bad-1-check-sha256.xz"), |e| {
         assert_eq!(
@@ -518,7 +521,7 @@ fn t39() {
         assert_eq!(e, XzError::CorruptedData)
     });
     run_test_expect_error(include_bytes!("../test_files/bad-2-index-4.xz"), |e| {
-        assert_eq!(e, XzError::IndexCrc32Mismatch(1575476230,1558699014))
+        assert_eq!(e, XzError::IndexCrc32Mismatch(1575476230, 1558699014))
     });
     run_test_expect_error(include_bytes!("../test_files/bad-2-index-5.xz"), |e| {
         assert_eq!(e, XzError::CorruptedData)
