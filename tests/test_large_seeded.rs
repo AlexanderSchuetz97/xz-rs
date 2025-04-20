@@ -67,7 +67,7 @@ pub fn test_large_seeded(a: Vec<&str>) {
         return;
     }
 
-    use xz_rs::XzReader;
+    use xz4rust::XzReader;
     let guard = MTX.lock();
     let (base_file, comp_file) = gen_test_files(DESIRED_ITER, a);
     let compressed = File::open(&comp_file).unwrap();
@@ -118,7 +118,7 @@ pub fn test_large_seeded(a: Vec<&str>) {
 
     compressed.read_exact(&mut compressed_buf).unwrap();
 
-    let mut decoder = xz_rs::XzDecoder::default();
+    let mut decoder = xz4rust::XzDecoder::default();
     let res = decoder
         .decode(compressed_buf.as_slice(), raw_buf.as_mut_slice())
         .unwrap();

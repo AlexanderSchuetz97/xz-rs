@@ -1,4 +1,4 @@
-use xz_rs::{XzCheckType, XzDecoder, XzError, XzNextBlockResult};
+use xz4rust::{XzCheckType, XzDecoder, XzError, XzNextBlockResult};
 
 fn run_test2(dd: &[u8], expected: &[u8]) {
     let mut decoder = XzDecoder::default();

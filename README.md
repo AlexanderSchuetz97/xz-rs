@@ -1,4 +1,4 @@
-# xz-rs
+# xz4rust
 Memory safe pure Rust no-std & no alloc XZ decoder
 
 ## Usage
@@ -6,7 +6,7 @@ Memory safe pure Rust no-std & no alloc XZ decoder
 ```rust
 use std::fs::File;
 use std::io::Read;
-use xz_rs::XzReader;
+use xz4rust::XzReader;
 
 fn main() -> std::io::Result<()> {
     //This file contains Hello\nWorld!
@@ -25,7 +25,7 @@ fn main() -> std::io::Result<()> {
 Note: XzDecoder itself uses about 32k memory on the stack. This example needs about 100k stack.
 See below for an alternative that uses much less stack.
 ```rust
-use xz_rs::{XzDecoder, XzNextBlockResult};
+use xz4rust::{XzDecoder, XzNextBlockResult};
 
 /// I am aware that the print! macro is not available in no_std, but other than that everything
 /// here should work in no_std environments.
@@ -80,7 +80,7 @@ fn main() {
 ### `no_std` + no allocator + minimal stack space
 ```rust
 use spin::mutex::SpinMutex;
-use xz_rs::{XzNextBlockResult, XzStaticDecoder};
+use xz4rust::{XzNextBlockResult, XzStaticDecoder};
 
 // 65536 is the size of the dictionary!
 // This entire variable is about 100k in size, which will be placed in your binary.
@@ -132,7 +132,7 @@ fn main() {
 ```
 ### `no_std` + alloc
 ```rust
-use xz_rs::{XzDecoder, XzNextBlockResult};
+use xz4rust::{XzDecoder, XzNextBlockResult};
 
 fn main() {
   //This file contains Hello\nWorld!
@@ -169,11 +169,11 @@ fn main() {
 ```
 
 ## Comparison to other XZ decoders available for Rust
-| Crate              | Can Decode | Can Encode | Can Decode BCJ | No C-Compiler/Unsafe | no-std       | no-alloc |
-|--------------------|------------|------------|----------------|----------------------|--------------|----------|
-| xz-rs (this crate) | &check;    | &cross;    | &check;        | &check;              | &check;      | &check;  |
-| xz2                | &check;    | &check;    | &cross; (*1)   | &cross;              | &cross;      | &cross;  |
-| xz-embedded-sys    | &check;    | &cross;    | &cross; (*1)   | &cross;              | &cross; (*1) | &cross;  |
+| Crate                | Can Decode | Can Encode | Can Decode BCJ | No C-Compiler/Unsafe | no-std       | no-alloc |
+|----------------------|------------|------------|----------------|----------------------|--------------|----------|
+| xz4rust (this crate) | &check;    | &cross;    | &check;        | &check;              | &check;      | &check;  |
+| xz2                  | &check;    | &check;    | &cross; (*1)   | &cross;              | &cross;      | &cross;  |
+| xz-embedded-sys      | &check;    | &cross;    | &cross; (*1)   | &cross;              | &cross; (*1) | &cross;  |
 
 (*1)
 It would probably be trivial to patch the crate.
@@ -190,11 +190,11 @@ The "Steam Deck" column refers to a baseline Steam Deck so it should be reasonab
 The "I7 8700k" Column refers to an ordinary desktop computer with a non overclocked Intel I7 8700k CPU running debian linux.
 This benchmark is probably not reproducible on a different computer.
 
-| Crate              | Steam Deck    | Intel I7 8700k |
-|--------------------|---------------|----------------|
-| xz-rs (this crate) | 13.7ms (136%) | 9.6ms  (133%)  |
-| xz2                | 10.1ms (100%) | 7.2ms  (100%)  |
-| xz-embedded-sys    | 11.8ms (117%) | 9.4ms  (130%)  | 
+| Crate                | Steam Deck    | Intel I7 8700k |
+|----------------------|---------------|----------------|
+| xz4rust (this crate) | 13.7ms (136%) | 9.6ms  (133%)  |
+| xz2                  | 10.1ms (100%) | 7.2ms  (100%)  |
+| xz-embedded-sys      | 11.8ms (117%) | 9.4ms  (130%)  | 
 
 
 # Features

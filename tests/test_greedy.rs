@@ -1,4 +1,4 @@
-use xz_rs::XzDecoder;
+use xz4rust::XzDecoder;
 
 #[test]
 fn test_decoder_is_greedy() {

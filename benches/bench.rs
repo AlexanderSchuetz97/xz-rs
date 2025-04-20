@@ -4,7 +4,7 @@ extern crate test;
 
 use std::io::Read;
 use test::{black_box, Bencher};
-use xz_rs::XzReader;
+use xz4rust::XzReader;
 
 #[bench]
 fn b1(b: &mut Bencher) {

@@ -10,7 +10,7 @@ description = "Command line utility to check if .xz are valid"
 readme = "README.md"
 
 [dependencies]
-xz-rs = "0.1.0"
+xz4rust = "0.1.0"
 
 [profile.release]
 codegen-units = 1

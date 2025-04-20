@@ -1,7 +1,7 @@
 use std::fs::File;
 use std::io::Read;
 use std::{env, io};
-use xz_rs::XzReader;
+use xz4rust::XzReader;
 
 fn do_io(path: &str) -> io::Result<()> {
     let mut reader = XzReader::new(File::open(path)?);
@@ -18,7 +18,7 @@ fn main() {
     let args = env::args().collect::<Vec<String>>();
     if args.len() == 1 {
         eprintln!(
-            "xzcheck verifies that .xz files are valid and can be decoded using the xz-rs library."
+            "xzcheck verifies that .xz files are valid and can be decoded using the xz4rust library."
         );
         eprintln!("xzcheck exits with code 0 on success or 255 on failure. A error message will be printed to stderr.");
         eprintln!("Usage: xzcheck <file>");

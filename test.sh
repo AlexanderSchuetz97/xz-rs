@@ -29,16 +29,16 @@ cargo test --release --target x86_64-pc-windows-gnu
 cargo test --release --target i686-pc-windows-gnu
 
 #Miri
-cargo +nightly miri test --package xz-rs --test tiny_stack test_tiny_stack -- --exact
+cargo +nightly miri test --package xz4rust --test tiny_stack test_tiny_stack -- --exact
 
 #Valgrind
 export VALGRINDFLAGS="--error-exitcode=1 --leak-check=full --show-leak-kinds=all"
-cargo valgrind test --package xz-rs --test tiny_stack test_tiny_stack -- --exact
+cargo valgrind test --package xz4rust --test tiny_stack test_tiny_stack -- --exact
 
 #Test some edge cases with usize/u32
 export TEST_LARGE_SEED=true
-cargo test --package xz-rs --test test_large_seeded --target x86_64-unknown-linux-gnu
-cargo test --package xz-rs --test test_large_seeded --target i686-unknown-linux-gnu
+cargo test --package xz4rust --test test_large_seeded --target x86_64-unknown-linux-gnu
+cargo test --package xz4rust --test test_large_seeded --target i686-unknown-linux-gnu
 
 # Clippy checks and checks if it compiles in some combinations
 cargo clippy

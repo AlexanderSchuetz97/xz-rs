@@ -1,5 +1,5 @@
 [package]
-name = "xz-rs"
+name = "xz4rust"
 version = "0.1.0"
 edition = "2021"
 license = "MIT"
@@ -8,7 +8,7 @@ keywords = ["xz", "lzma", "compression", "no-std"]
 categories = ["compression", "no-std", "no-std::no-alloc"]
 description = "Memory safe pure Rust no-std & no alloc XZ decoder"
 readme = "README.md"
-repository = "https://github.com/AlexanderSchuetz97/xz-rs"
+repository = "https://github.com/AlexanderSchuetz97/xz4rust"
 exclude = [
     "xzcheck/*",
     "generated_testfiles/*",

@@ -1,4 +1,4 @@
-use xz_rs::{XzDecoder, XzNextBlockResult};
+use xz4rust::{XzDecoder, XzNextBlockResult};
 
 fn main() {
     //This file contains Hello\nWorld!

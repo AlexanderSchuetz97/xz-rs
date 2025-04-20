@@ -1,6 +1,6 @@
 use std::fs::File;
 use std::io::Read;
-use xz_rs::XzReader;
+use xz4rust::XzReader;
 
 fn main() -> std::io::Result<()> {
     let file = File::open("test_files/good-1-block_header-1.xz")?;

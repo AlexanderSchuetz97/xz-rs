@@ -1,4 +1,4 @@
-use xz_rs::{XzDecoder, XzNextBlockResult};
+use xz4rust::{XzDecoder, XzNextBlockResult};
 
 /// I am aware that the print! macro is not available in no_std, but other than that everything
 /// here should work in no_std environments.

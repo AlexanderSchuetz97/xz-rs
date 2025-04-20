@@ -1,6 +1,6 @@
 use std::io::Read;
 use std::thread;
-use xz_rs::XzReader;
+use xz4rust::XzReader;
 
 #[test]
 fn test_tiny_stack() {

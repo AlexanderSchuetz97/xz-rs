@@ -1,5 +1,5 @@
 use std::io::Read;
-use xz_rs::XzReader;
+use xz4rust::XzReader;
 
 #[test]
 fn run_perf() {

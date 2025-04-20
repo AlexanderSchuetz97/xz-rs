@@ -1,5 +1,5 @@
 use spin::mutex::SpinMutex;
-use xz_rs::{XzNextBlockResult, XzStaticDecoder};
+use xz4rust::{XzNextBlockResult, XzStaticDecoder};
 
 // 65536 is the size of the dictionary!
 // This entire variable is about 100k in size, which will be placed in your binary.
