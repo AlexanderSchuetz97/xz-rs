@@ -174,18 +174,18 @@ Speed values are based on the `b2` benchmark in the benches' directory.
 This benchmark decodes a ~1mb amd64 `.so` file. IO delay is not included
 as the entire 1mb xz file is loaded into memory before the benchmark begins.
 
-The benchmarks use rust 1.86
+The benchmarks uses rust 1.86
 
 The "Steam Deck" column refers to a baseline Steam Deck so it should be reasonably reproducible.
 
 The "I7 8700k" Column refers to an ordinary desktop computer with a non overclocked Intel I7 8700k CPU running debian linux.
 This benchmark is probably not reproducible on a different computer.
 
-| Crate              | Steam Deck | Intel I7 8700k |
-|--------------------|------------|----------------|
-| xz-rs (this crate) | TBD        | 9.6ms  (133%)  |
-| xz2                | TBD        | 7.2ms  (100%)  |
-| xz-embedded-sys    | TBD        | 9.4ms  (130%)  | 
+| Crate              | Steam Deck    | Intel I7 8700k |
+|--------------------|---------------|----------------|
+| xz-rs (this crate) | 13.7ms (136%) | 9.6ms  (133%)  |
+| xz2                | 10.1ms (100%) | 7.2ms  (100%)  |
+| xz-embedded-sys    | 11.8ms (117%) | 9.4ms  (130%)  | 
 
 
 # Features
