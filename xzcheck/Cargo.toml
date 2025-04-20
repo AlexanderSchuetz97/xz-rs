@@ -3,6 +3,11 @@ name = "xzcheck"
 version = "0.1.0"
 edition = "2021"
 license = "MIT"
+authors = ["Alexander Schütz <aschuetz@protonmail.com>"]
+keywords = ["xz", "lzma", "compression"]
+categories = ["compression", "command-line-utilities"]
+description = "Command line utility to check if .xz are valid"
+readme = "README.md"
 
 [dependencies]
 xz-rs = "0.1.0"

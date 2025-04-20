@@ -298,7 +298,7 @@ If your use-case allows for this then I recommend you to do the same if you are 
 
 You can install it normally via `cargo install xzcheck`
 It fully decodes the entire .xz file and checks the content hash. 
-If it succeeds in decoding it exists with code 0 otherwise it exits with code 255 and
+If it succeeds in decoding it exits with code 0 otherwise it exits with code 255 and
 prints an error to stderr. This is useful if you wish to automatically test created 
 xz files to see if your application will later be able to decode them.
 
