@@ -1,0 +1,6 @@
+/target
+.idea
+Cargo.lock
+/generated_testfiles
+/xzcheck/target
+/xzcheck/Cargo.lock

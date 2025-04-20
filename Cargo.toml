@@ -1,0 +1,47 @@
+[package]
+name = "xz-rs"
+version = "0.1.0"
+edition = "2021"
+license = "MIT"
+authors = ["Alexander Schütz <aschuetz@protonmail.com>"]
+keywords = ["xz", "lzma", "compression", "no-std"]
+categories = ["compression", "no-std", "no-std::no-alloc"]
+description = "Memory Safe pure Rust no-std & no alloc XZ decoder"
+readme = "README.md"
+repository = "https://github.com/AlexanderSchuetz97/xz-rs"
+exclude = [
+    "xzcheck/*",
+    "generated_testfiles/*",
+    "test_files/*",
+    "benches/*",
+    "examples/*",
+    "test.sh",
+    "tests/*"
+]
+
+[features]
+default = ["alloc", "std", "bcj", "sha256", "crc64"]
+alloc = []
+std = ["alloc"]
+bcj = []
+sha256 = ["sha2"]
+crc64 = []
+no_unsafe = []
+
+
+[dependencies]
+sha2 = { version = "0.10.8", optional = true }
+
+[dev-dependencies]
+spin = "0.10.0"
+hex = "0.4.3"
+
+#Benchmark stuff
+[target.'cfg(target_arch = "x86_64")'.dev-dependencies]
+xz2 = "0.1.7"
+xz-embedded-sys = "0.1.1"
+
+[profile.bench]
+codegen-units = 1
+lto = "fat"
+opt-level = 3
