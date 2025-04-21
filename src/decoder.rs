@@ -1430,7 +1430,7 @@ impl<'a> XzDictBuffer<'a> {
             target.copy_from_slice(src);
 
             self.set_dict_pos(self.dict_pos().wrapping_add(copy_size));
-            if (self.get_dict_limit()) < self.dict_pos() {
+            if (self.dict_full()) < self.dict_pos() {
                 self.set_dict_full();
             }
 
@@ -1446,16 +1446,32 @@ impl<'a> XzDictBuffer<'a> {
     }
 
     /// returns the byte for the given lzma dist.
+    /// # Panics
+    /// may panic if dist is not a valid lzma dist
     fn dict_get(&self, dist: usize) -> u8 {
+        debug_assert!(self.dict_size() > 0);
         if self.dict_full() == 0 {
             return 0;
         }
 
         if dist >= self.dict_pos() {
-            let offset = self.dict_size() - self.dict_pos() - (dist) - 1;
+            // Info: Concerning underflow.
+            // This term is (A) - (B),
+            // A cannot wrap internally because dict_size of 0 is not valid.
+            // B cannot wrap internally due to the IF above ensuring that it doesn't.
+            // A - B must produce a valid index that is less than A+1
+            // The only way for this to hold true with wrapping is if B is usize::MAX.
+            // The only way that happen is if dist is usize::MAX and dict_pos is 0.
+            // This is impossible on 64 bit targets considering dist was numerically bounded to u32::MAX.
+            // Conclusion is therefore that for a valid dist underflow is not possible, even on 32 bit targets.
+
+            // Note: This may underflow for invalid dist in debug mode!
+            let offset = (self.dict_size() - 1) - (dist - self.dict_pos());
+            // Note: This may panic for invalid dist in release mode!
             return self.buffer_get(offset);
         }
 
+        //This cant underflow.
         let offset = self.dict_pos() - (dist) - 1;
         self.buffer_get(offset)
     }

@@ -35,19 +35,22 @@ cargo +nightly miri test --package xz4rust --test tiny_stack test_tiny_stack -- 
 export VALGRINDFLAGS="--error-exitcode=1 --leak-check=full --show-leak-kinds=all"
 cargo valgrind test --package xz4rust --test tiny_stack test_tiny_stack -- --exact
 
+# Clippy checks and checks if it compiles in some combinations
+cargo clippy -- -D warnings
+cargo clippy --no-default-features -- -D warnings
+cargo clippy --no-default-features --features alloc -- -D warnings
+cargo clippy --no-default-features --features std -- -D warnings
+cargo clippy --no-default-features --features crc64 -- -D warnings
+cargo clippy --no-default-features --features bcj -- -D warnings
+cargo clippy --no-default-features --features sha256 -- -D warnings
+
+# Build examples
+cargo build --examples
+
+# Run bench just to make sure I didnt break it!
+cargo +nightly bench
+
 #Test some edge cases with usize/u32
 export TEST_LARGE_SEED=true
 cargo test --package xz4rust --test test_large_seeded --target x86_64-unknown-linux-gnu
 cargo test --package xz4rust --test test_large_seeded --target i686-unknown-linux-gnu
-
-# Clippy checks and checks if it compiles in some combinations
-cargo clippy
-cargo clippy --no-default-features
-cargo clippy --no-default-features --features alloc
-cargo clippy --no-default-features --features std
-cargo clippy --no-default-features --features crc64
-cargo clippy --no-default-features --features bcj
-cargo clippy --no-default-features --features sha256
-
-# Run bench just to make sure I didnt break it!
-cargo +nightly bench

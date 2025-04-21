@@ -18,6 +18,7 @@ pub const fn clamp_u32_to_u8(from: u32) -> u8 {
 
 /// Casts an u64 to an u8 clamping all excess bits off.
 #[allow(clippy::cast_possible_truncation)]
+#[cfg(feature = "bcj")] // only used by bcj filter.
 pub const fn clamp_u64_to_u8(from: u64) -> u8 {
     from as u8
 }

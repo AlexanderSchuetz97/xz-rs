@@ -603,3 +603,23 @@ fn t46() {
         |e| assert_eq!(e, XzError::UnsupportedStreamHeaderOption),
     );
 }
+
+#[test]
+fn t47() {
+    //This file has some history.
+    //Basically I was running `xzcheck` on all .xz files on my nas.
+    //This one failed. xz -t however succeeded!
+    //Turns out this file found an integer underflow porting bug in dict_get
+    //as well as me mistakenly using the wrong variable in dict_uncompressed.
+    //2 bugs found by one file. Great success.
+    //I do not precisely know where this file came from, all I know is that
+    //Its a tar.bzip2.xz. Yes I dont know why I had that in this format either.
+    //The bzip archive should contain a power pc 64 little endian openjdk 8,
+    //but for this test case this is irrelevant, we obviously do not decode the bzip archive in this test.
+    //I vaguely remember using this to develop and test a Java JNI C library in the past.
+    //The extracted version of the archive was simply extracted with debian 12 "xz -d -k"
+    run_test2(
+        include_bytes!("../test_files/openjdk_8_bzip.xz"),
+        include_bytes!("../test_files/openjdk_8_bzip"),
+    );
+}
