@@ -1,6 +1,6 @@
 [package]
 name = "xzcheck"
-version = "0.1.0"
+version = "0.1.1"
 edition = "2021"
 license = "MIT"
 authors = ["Alexander Schütz <aschuetz@protonmail.com>"]
@@ -10,7 +10,7 @@ description = "Command line utility to check if .xz are valid"
 readme = "README.md"
 
 [dependencies]
-xz4rust = "0.1.0"
+xz4rust = "0.1.1"
 
 [profile.release]
 codegen-units = 1
