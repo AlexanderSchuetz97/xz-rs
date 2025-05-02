@@ -1,5 +1,7 @@
 use crate::clamp::{clamp_u32_to_u8, clamp_u64_to_u32, clamp_u64_to_u8, clamp_us_to_u32};
-use crate::decoder::{DecodeResult, XzError, XzInOutBuffer, XzLzma2Decoder};
+use crate::decoder::{
+    DecodeResult, XzDictBuffer, XzError, XzInOutBuffer,
+};
 
 /// State for decoding the bcj filter.
 /// Only used when bcj is enabled in the stream header
@@ -73,11 +75,13 @@ impl BcjFilterState {
 
     /// run the bcj filter. Will also internally call the lzma decoder to
     /// supply the data that will then be run through the bcj filter.
-    pub(crate) fn run(
+    pub(crate) fn run<
+        T: FnMut(&mut XzInOutBuffer, &mut XzDictBuffer) -> Result<DecodeResult, XzError>,
+    >(
         &mut self,
-        lzma2: &mut XzLzma2Decoder,
+        mut next_filter: T,
         b: &mut XzInOutBuffer,
-        d: &mut crate::decoder::XzDictBuffer,
+        d: &mut XzDictBuffer,
     ) -> Result<DecodeResult, XzError> {
         if self.filtered > 0 {
             self.flush(b);
@@ -93,7 +97,7 @@ impl BcjFilterState {
         if self.size == 0 || self.size < b.output_remaining() {
             let out_start = b.output_position();
             b.copy_to_output(&self.buf.as_slice()[..self.size]);
-            let ret = lzma2.xz_dec_lzma2_run(b, d)?;
+            let ret = next_filter(b, d)?;
             let out_now = b.output_position();
             let size = out_now - out_start;
             b.output_seek_set(out_start);
@@ -121,7 +125,7 @@ impl BcjFilterState {
         if b.output_remaining() > 0 {
             let mut temp_buffer = XzInOutBuffer::new(b.input_slice(), &mut self.buf[self.size..]);
             debug_assert!(b.output_position() <= b.output_len());
-            let ret = lzma2.xz_dec_lzma2_run(&mut temp_buffer, d)?;
+            let ret = next_filter(&mut temp_buffer, d)?;
             self.size += temp_buffer.output_position();
             b.input_seek_add(temp_buffer.input_position());
             debug_assert!(self.size <= self.buf.len());

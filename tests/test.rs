@@ -169,11 +169,10 @@ fn t5() {
 
 #[test]
 fn t6() {
-    run_test_expect_error(
+    run_test2(
         include_bytes!("../test_files/good-1-3delta-lzma2.xz"),
-        |err| assert_eq!(XzError::DeltaFilterUnsupported, err),
+        include_bytes!("../test_files/good-1-3delta-lzma2"),
     );
-    //DELTA FILTER IS NOT INCLUDED
 }
 
 #[test]
@@ -251,10 +250,10 @@ fn t15() {
 
 #[test]
 fn t16() {
-    run_test_expect_error(
+    run_test2(
         include_bytes!("../test_files/good-1-delta-lzma2.tiff.xz"),
-        |err| assert_eq!(XzError::DeltaFilterUnsupported, err),
-    ); //DELTA FILTER NOT INCLUDED
+        include_bytes!("../test_files/good-1-delta-lzma2.tiff"),
+    );
 }
 
 #[test]
@@ -621,5 +620,45 @@ fn t47() {
     run_test2(
         include_bytes!("../test_files/openjdk_8_bzip.xz"),
         include_bytes!("../test_files/openjdk_8_bzip"),
+    );
+}
+
+#[test]
+fn t48() {
+    run_test2(
+        include_bytes!("../test_files/concat_amd64_armel_blob.xz"),
+        include_bytes!("../test_files/concat_amd64_armel_blob"),
+    );
+}
+
+#[test]
+fn t49() {
+    run_test2(
+        include_bytes!("../test_files/concat_amd64_armel_riscv_blob.xz"),
+        include_bytes!("../test_files/concat_amd64_armel_riscv_blob"),
+    );
+}
+
+#[test]
+fn t50() {
+    run_test2(
+        include_bytes!("../test_files/rand4096.xz"),
+        include_bytes!("../test_files/rand4096"),
+    );
+}
+
+#[test]
+fn t51() {
+    run_test(
+        include_bytes!("../test_files/rand128.xz"),
+        include_bytes!("../test_files/rand128"),
+    );
+}
+
+#[test]
+fn t52() {
+    run_test2(
+        include_bytes!("../test_files/rand312.xz"),
+        include_bytes!("../test_files/rand312"),
     );
 }

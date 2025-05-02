@@ -205,7 +205,11 @@ For no_std disable the default features and enable them as needed!
   - Enabled by default
   - BCJ improves the compression of compiled executable code. This is usually present in .xz packages bundled by some linux distributions.
   - If you only need to decode .xz files that you create yourself then you probably do not need this feature unless you explicitly enable it during compression.
-  - If this feature is disabled then upon decoding of the header of a xz file with bcj the implementation will return an Err.
+  - If this feature is disabled, then upon decoding of the header of a xz file with bcj the implementation will return an Err.
+- `delta` - enabled support for decoding xz files that use the delta filter.
+  - Enabled by default
+  - delta is rarely used. It can be useful in improving the compression ratio in bitmaps or tiff images.
+  - If this feature is disabled, then upon decoding of the header of a xz file with the delta filter the implementation will return an Err.
 - `crc64`
   - Enabled by default
   - Support for crc64 checksums in xz files
@@ -299,7 +303,7 @@ If you have any test files that cause panics or overflows (and therefore panics 
 then those would be greatly appreciated.
 
 ## xzcheck program
-This library is used by me to decode patches/releases for a different application as part an installer application. 
+I use this library to decode patches/releases for a different application as part an installer application. 
 To reduce risk and ensure that patches can be decoded without issue by the installer, 
 I have created a small program called xzcheck which verifies that a .xz file is valid 
 and can be decoded by this library. I run xzcheck as part of my build process for my patches.
@@ -313,13 +317,11 @@ xz files to see if your application will later be able to decode them.
 
 ## Unsupported targets
 Any rust target where usize/pointer size is 16 bit is not supported.
-Currently, rust only has one tier-3 target for some microcontroller where this is the case.
+Currently, rust only has one tier-3 target for a microcontroller where this is the case.
 This crate will emit a compiler error for such targets.
 
 ## Future work
 * Finish refactoring existing code.
-* Implement the "Delta" filter.
 * Implement offsets for the BCJ filters.
-* Implement filter chains.
 * Optimize the current implementation using perf.
-* Port/Implement an XZ Encoder. (A lot of work, that I currently do not need myself...)
+* Port/Implement an XZ Encoder. (A lot of work that I currently do not need myself...)

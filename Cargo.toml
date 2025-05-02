@@ -23,10 +23,11 @@ exclude = [
 all-features = true
 
 [features]
-default = ["alloc", "std", "bcj", "sha256", "crc64"]
+default = ["alloc", "std", "bcj", "sha256", "crc64", "delta"]
 alloc = []
 std = ["alloc"]
 bcj = []
+delta = []
 sha256 = ["sha2"]
 crc64 = []
 no_unsafe = []

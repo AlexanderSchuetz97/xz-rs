@@ -53,6 +53,10 @@ mod clamp;
 /// variable length integer decoding.
 mod vli;
 
+/// xz delta filter decoder
+#[cfg(feature = "delta")]
+mod delta;
+
 // These are all types that are needed to use this crate to decode some xz files.
 #[cfg(feature = "std")]
 pub use stl::XzReader;

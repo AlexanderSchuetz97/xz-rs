@@ -2,6 +2,8 @@
 use crate::bcj::BcjFilterState;
 use crate::clamp::{clamp_u32_to_u16, clamp_u32_to_u8, clamp_u64_to_u32, clamp_us_to_u32};
 use crate::crc32::crc32;
+#[cfg(feature = "delta")]
+use crate::delta::DeltaDecoder;
 #[cfg(feature = "sha256")]
 use crate::sha256::XzSha256;
 use crate::vli::{VliDecoder, VliResult};
@@ -12,6 +14,8 @@ use alloc::boxed::Box;
 use alloc::vec;
 use core::fmt::{Debug, Display, Formatter};
 use core::mem;
+#[cfg(feature = "delta")]
+use core::num::NonZeroUsize;
 use core::ops::{Deref, DerefMut, Sub};
 
 /// Input Output Buffer
@@ -128,6 +132,15 @@ impl<'a> XzInOutBuffer<'a> {
     /// if `start_idx` is larger than the current position.
     pub fn output_slice_look_back(&self, start_idx: usize) -> &[u8] {
         &self.out[start_idx..self.out_pos]
+    }
+
+    /// Returns a mutable output slice that starts at `start_idx` and goes until the current output buffer position.
+    /// This can be used to re-inspect bytes in the output buffer.
+    /// #Panics
+    /// if `start_idx` is larger than the current position.
+    #[cfg(feature = "delta")] //Currently used to apply the delta filter.
+    pub fn output_slice_look_back_mut(&mut self, start_idx: usize) -> &mut [u8] {
+        &mut self.out[start_idx..self.out_pos]
     }
 
     /// Returns the mutable output slice
@@ -1752,6 +1765,7 @@ pub enum XzError {
     BcjFilterWithOffsetNotSupported,
     #[cfg(feature = "bcj")]
     UnsupportedBcjFilter(u32),
+    #[cfg(not(feature = "delta"))]
     DeltaFilterUnsupported,
 
     ContentCrc32Mismatch(u32, u32), //Actual, Excepted
@@ -1815,6 +1829,7 @@ impl Display for XzError {
             Self::UnsupportedBcjFilter(flt) => {
                 f.write_fmt(format_args!("UnsupportedBcjFilter(type={flt})",))
             }
+            #[cfg(not(feature = "delta"))]
             Self::DeltaFilterUnsupported => f.write_str("DeltaFilterUnsupported"),
             Self::ContentCrc32Mismatch(actual, expected) => f.write_fmt(format_args!(
                 "ContentCrc32Mismatch(actual={actual}, expected={expected})"
@@ -2180,12 +2195,26 @@ impl Default for XzDecoder<'static> {
     }
 }
 
+/// Type of filter in a filter slot, there are 3 slots.
+#[derive(Debug, Copy, Clone, Eq, PartialEq)]
+#[repr(u8)]
+enum Filter {
+    /// Lzma/Empty.
+    Empty = 0,
+    ///Bcj filter
+    #[cfg(feature = "bcj")]
+    Bcj,
+    ///Delta filter
+    #[cfg(feature = "delta")]
+    Delta,
+}
+
 /// Contains the entire state of the decoder except for the dictionary buffer.
 #[derive(Debug)]
 pub struct XzInnerDecoder {
     /// state machine state
     state: XzDecoderState,
-    /// check type to use
+    /// check algorithm to use
     check_type: XzCheckType,
     /// TODO remove this only needed by crc32/crc64 check that I want to re-implement anyways...
     pos: usize,
@@ -2211,12 +2240,27 @@ pub struct XzInnerDecoder {
     temp: XzTempBuffer,
     /// lzma decoder state
     lzma2: XzLzma2Decoder,
-    /// are we using bcj to decode the stream?
-    #[cfg(feature = "bcj")]
-    bcj_active: bool,
+    /// Which filter chain are we using?
+    filter_chain: [Filter; 3],
     /// state of the bcj filter.
     #[cfg(feature = "bcj")]
-    bcj: BcjFilterState,
+    bcj0: BcjFilterState,
+    /// state of the bcj filter.
+    #[cfg(feature = "bcj")]
+    bcj1: BcjFilterState,
+    /// state of the bcj filter.
+    #[cfg(feature = "bcj")]
+    bcj2: BcjFilterState,
+    ///Delta decoder state
+    #[cfg(feature = "delta")]
+    delta0: DeltaDecoder,
+    ///Delta decoder state
+    #[cfg(feature = "delta")]
+    delta1: DeltaDecoder,
+    ///Delta decoder state
+    #[cfg(feature = "delta")]
+    delta2: DeltaDecoder,
+
     /// sha256 state
     #[cfg(feature = "sha256")]
     sha256: XzSha256,
@@ -2249,9 +2293,18 @@ impl XzInnerDecoder {
             #[cfg(feature = "sha256")]
             sha256: XzSha256::new(),
             #[cfg(feature = "bcj")]
-            bcj_active: false,
+            bcj0: BcjFilterState::new(),
             #[cfg(feature = "bcj")]
-            bcj: BcjFilterState::new(),
+            bcj1: BcjFilterState::new(),
+            #[cfg(feature = "bcj")]
+            bcj2: BcjFilterState::new(),
+            #[cfg(feature = "delta")]
+            delta0: DeltaDecoder::new(),
+            #[cfg(feature = "delta")]
+            delta1: DeltaDecoder::new(),
+            #[cfg(feature = "delta")]
+            delta2: DeltaDecoder::new(),
+            filter_chain: [Filter::Empty; 3],
         }
     }
 
@@ -2345,6 +2398,7 @@ impl XzInnerDecoder {
     }
 
     /// decodes a block header from the stream.
+    #[allow(clippy::too_many_lines)] //Todo re-implement this function with some sort of borrowed cursor and split it into sections that make sense.
     fn dec_block_header(&mut self, d: &mut XzDictBuffer) -> Result<(), XzError> {
         //the temp buffer size is determined by the block header size which should be at least 8 even with a malicious input file.
         debug_assert!(self.temp.size >= 8);
@@ -2359,10 +2413,7 @@ impl XzInnerDecoder {
         let buf = self.temp.buf();
 
         let mut pos = 2usize;
-        if buf[1] & 0x3E != 0 {
-            if buf[2] == 3 {
-                return Err(XzError::DeltaFilterUnsupported);
-            }
+        if buf[1] & 0x3C != 0 {
             return Err(XzError::UnsupportedBlockHeaderOption);
         }
         if buf[1] & 0x40 != 0 {
@@ -2388,35 +2439,80 @@ impl XzInnerDecoder {
             self.block_header.uncompressed = u64::MAX;
         }
 
-        let bcj = buf[1] & 0x1 != 0;
-        #[cfg(feature = "bcj")]
-        {
-            self.bcj_active = bcj;
+        let filter_count = (buf[1] & 0x03) as usize;
+        for i in 0..filter_count {
+            let bcj = buf[pos] != 3;
+            #[cfg(feature = "bcj")]
+            {
+                if bcj {
+                    self.filter_chain[i] = Filter::Bcj;
+                    if self.temp.size.wrapping_sub(pos) < 2 {
+                        return Err(XzError::BlockHeaderTooSmall);
+                    }
+                    let filter = buf[pos];
+                    pos += 1;
+                    let bcj_filter = match i {
+                        0 => &mut self.bcj0,
+                        1 => &mut self.bcj1,
+                        2 => &mut self.bcj2,
+                        _ => unreachable!(),
+                    };
+                    bcj_filter.reset(filter)?;
 
-            if self.bcj_active {
-                if self.temp.size.wrapping_sub(pos) < 2 {
-                    return Err(XzError::BlockHeaderTooSmall);
+                    if buf[pos] != 0 {
+                        return Err(XzError::BcjFilterWithOffsetNotSupported);
+                    }
+                    pos += 1;
+                    continue;
                 }
-                let filter = buf[pos];
-                pos += 1;
-
-                if filter == 3 {
+            }
+            #[cfg(not(feature = "bcj"))]
+            {
+                if bcj {
+                    return Err(XzError::BcjFilterNotSupported);
+                }
+            }
+            let delta = buf[pos] == 3;
+            #[cfg(feature = "delta")]
+            {
+                if delta {
+                    if self.temp.size.wrapping_sub(pos) < 2 {
+                        return Err(XzError::BlockHeaderTooSmall);
+                    }
+                    pos += 1;
+                    //length of "distance" we only support 1 byte distance aka 1 to 256
+                    if buf[pos] != 1 {
+                        return Err(XzError::UnsupportedBlockHeaderOption);
+                    }
+                    pos += 1;
+                    let distance = buf[pos]; //0 means distance of 1!
+                    let delta_coder = match i {
+                        0 => &mut self.delta0,
+                        1 => &mut self.delta1,
+                        2 => &mut self.delta2,
+                        _ => unreachable!(),
+                    };
+                    delta_coder.reset(
+                        NonZeroUsize::new((distance as usize) + 1)
+                            .ok_or(XzError::UnsupportedBlockHeaderOption)?,
+                    ); //ERR is unreachable!
+                    self.filter_chain[i] = Filter::Delta;
+                    pos += 1;
+                    continue;
+                }
+            }
+            #[cfg(not(feature = "delta"))]
+            {
+                if delta {
                     return Err(XzError::DeltaFilterUnsupported);
                 }
-
-                self.bcj.reset(filter)?;
-
-                if buf[pos] != 0 {
-                    return Err(XzError::BcjFilterWithOffsetNotSupported);
-                }
-                pos += 1;
             }
+
+            self.filter_chain[i] = Filter::Empty;
         }
-        #[cfg(not(feature = "bcj"))]
-        {
-            if bcj {
-                return Err(XzError::BcjFilterNotSupported);
-            }
+
+        for i in filter_count..self.filter_chain.len() {
+            self.filter_chain[i] = Filter::Empty;
         }
 
         if self.temp.size().saturating_sub(pos) < 2 {
@@ -2471,16 +2567,98 @@ impl XzInnerDecoder {
     }
 
     /// Delegates block decoding to the bcj filter or calls the lzma decoder.
-    fn dec_block_inner(
+    pub fn apply_filter(
         &mut self,
         b: &mut XzInOutBuffer,
         d: &mut XzDictBuffer,
     ) -> Result<DecodeResult, XzError> {
-        #[cfg(feature = "bcj")]
-        if self.bcj_active {
-            return self.bcj.run(&mut self.lzma2, b, d);
+        match (
+            self.filter_chain[0],
+            self.filter_chain[1],
+            self.filter_chain[2],
+        ) {
+            (Filter::Empty, _, _) => self.lzma2.xz_dec_lzma2_run(b, d),
+            #[cfg(feature = "delta")]
+            (Filter::Delta, f2, f3) => self.delta0.run(
+                |b, d| match f2 {
+                    Filter::Empty => self.lzma2.xz_dec_lzma2_run(b, d),
+                    #[cfg(feature = "bcj")]
+                    Filter::Bcj => self.bcj1.run(
+                        |b, d| match f3 {
+                            Filter::Empty => self.lzma2.xz_dec_lzma2_run(b, d),
+                            Filter::Bcj => {
+                                self.bcj2
+                                    .run(|b, d| self.lzma2.xz_dec_lzma2_run(b, d), b, d)
+                            }
+                            Filter::Delta => {
+                                self.delta2
+                                    .run(|b, d| self.lzma2.xz_dec_lzma2_run(b, d), b, d)
+                            }
+                        },
+                        b,
+                        d,
+                    ),
+                    Filter::Delta => self.delta1.run(
+                        |b, d| match f3 {
+                            Filter::Empty => self.lzma2.xz_dec_lzma2_run(b, d),
+                            #[cfg(feature = "bcj")]
+                            Filter::Bcj => {
+                                self.bcj2
+                                    .run(|b, d| self.lzma2.xz_dec_lzma2_run(b, d), b, d)
+                            }
+                            Filter::Delta => {
+                                self.delta2
+                                    .run(|b, d| self.lzma2.xz_dec_lzma2_run(b, d), b, d)
+                            }
+                        },
+                        b,
+                        d,
+                    ),
+                },
+                b,
+                d,
+            ),
+            #[cfg(feature = "bcj")]
+            (Filter::Bcj, f2, f3) => self.bcj0.run(
+                |b, d| match f2 {
+                    Filter::Empty => self.lzma2.xz_dec_lzma2_run(b, d),
+                    Filter::Bcj => self.bcj1.run(
+                        |b, d| match f3 {
+                            Filter::Empty => self.lzma2.xz_dec_lzma2_run(b, d),
+                            Filter::Bcj => {
+                                self.bcj2
+                                    .run(|b, d| self.lzma2.xz_dec_lzma2_run(b, d), b, d)
+                            }
+                            #[cfg(feature = "delta")]
+                            Filter::Delta => {
+                                self.delta2
+                                    .run(|b, d| self.lzma2.xz_dec_lzma2_run(b, d), b, d)
+                            }
+                        },
+                        b,
+                        d,
+                    ),
+                    #[cfg(feature = "delta")]
+                    Filter::Delta => self.delta1.run(
+                        |b, d| match f3 {
+                            Filter::Empty => self.lzma2.xz_dec_lzma2_run(b, d),
+                            Filter::Bcj => {
+                                self.bcj2
+                                    .run(|b, d| self.lzma2.xz_dec_lzma2_run(b, d), b, d)
+                            }
+                            Filter::Delta => {
+                                self.delta2
+                                    .run(|b, d| self.lzma2.xz_dec_lzma2_run(b, d), b, d)
+                            }
+                        },
+                        b,
+                        d,
+                    ),
+                },
+                b,
+                d,
+            ),
         }
-        self.lzma2.xz_dec_lzma2_run(b, d)
     }
 
     /// Decodes a block
@@ -2497,7 +2675,7 @@ impl XzInnerDecoder {
         let in_start = b.input_position();
         let out_start = b.output_position();
 
-        let ret = self.dec_block_inner(b, d)?;
+        let ret = self.apply_filter(b, d)?;
 
         //TODO probably doesnt wrap
         self.block.compressed = self
