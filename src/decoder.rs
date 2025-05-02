@@ -2081,10 +2081,15 @@ impl<'a> XzDecoder<'a> {
         }
     }
 
+    /// This allocates a `XzDecoder` in heap.
+    /// The default dictionary buffer of 8MB will be allocated additionally.
+    /// 8MB is the default value used by lzma-utils to create
+    /// .xz files if no other option is passed to the xz program.
+    /// The maximum dictionary size the decoder will allocate (should the input file require it) is 3GB.
     #[cfg(feature = "alloc")]
     #[must_use]
     pub fn in_heap() -> Box<XzDecoder<'static>> {
-        Self::in_heap_with_alloc_dict_size(4096, 1 << 26)
+        Self::in_heap_with_alloc_dict_size(crate::DICT_SIZE_PROFILE_7, DICT_SIZE_MAX)
     }
 
     #[cfg(feature = "alloc")]
@@ -2106,7 +2111,7 @@ impl<'a> XzDecoder<'a> {
         initial_dict.truncate(DICT_SIZE_MAX);
 
         //This may blow the stack due to possible stack allocation of XzDecoder before it is moved to heap.
-        //It needs 32k stack to succeed.
+        //It needs a 32k-40k stack to succeed.
         let mut result = Box::new(XzDecoder::with_alloc_dict(
             initial_dict,
             max_dict.min(DICT_SIZE_MAX),

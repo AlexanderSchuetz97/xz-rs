@@ -82,12 +82,14 @@ fn main() {
 use spin::mutex::SpinMutex;
 use xz4rust::{XzNextBlockResult, XzStaticDecoder};
 
-// 65536 is the size of the dictionary!
-// This entire variable is about 100k in size, which will be placed in your binary.
-// If you are willing to use unsafe code then you can also use zeroed memory.
-// This will work as long as you reset the decoder before using it.
-// In this case we use no unsafe code and just accept that the binary gets bigger.
-static DECODER: SpinMutex<XzStaticDecoder<65536>> = SpinMutex::new(XzStaticDecoder::new());
+
+// DICT_SIZE_PROFILE_0 is the size of the dictionary in bytes! It has a direct impact on the size of the variable.
+// In this configuration this entire variable is about 300k in size, which will be placed in your binary.
+// If you are willing to use unsafe code then you should also be able to place it in zeroed memory. (if the linker permits)
+// In this example we use no unsafe code and just accept that the binary gets bigger.
+static DECODER: SpinMutex<XzStaticDecoder<{ xz4rust::DICT_SIZE_PROFILE_0 }>> = 
+  SpinMutex::new(XzStaticDecoder::new());
+
 fn main() {
   //This file contains Hello\nWorld!
   let compressed_data = include_bytes!("../test_files/good-1-block_header-1.xz");
@@ -139,8 +141,10 @@ fn main() {
   let compressed_data = include_bytes!("../test_files/good-1-block_header-1.xz");
   let mut decompressed_data = Vec::new();
 
-  let initial_alloc_size = 4096;
-  let max_alloc_size = 0x10000;
+  let initial_alloc_size = xz4rust::DICT_SIZE_MIN;
+  // Note: This is 3GB, decide yourself if you want the decoder 
+  // to allocate this much memory if the possibly untrustworthy input file requires it.
+  let max_alloc_size = xz4rust::DICT_SIZE_MAX;
   let mut decoder = XzDecoder::in_heap_with_alloc_dict_size(initial_alloc_size, max_alloc_size);
 
   let mut input_position = 0usize;
@@ -206,7 +210,7 @@ For no_std disable the default features and enable them as needed!
   - BCJ improves the compression of compiled executable code. This is usually present in .xz packages bundled by some linux distributions.
   - If you only need to decode .xz files that you create yourself then you probably do not need this feature unless you explicitly enable it during compression.
   - If this feature is disabled, then upon decoding of the header of a xz file with bcj the implementation will return an Err.
-- `delta` - enabled support for decoding xz files that use the delta filter.
+- `delta` - enables support for decoding xz files that use the delta filter.
   - Enabled by default
   - delta is rarely used. It can be useful in improving the compression ratio in bitmaps or tiff images.
   - If this feature is disabled, then upon decoding of the header of a xz file with the delta filter the implementation will return an Err.
@@ -236,14 +240,15 @@ For no_std disable the default features and enable them as needed!
 ## How was this crate implemented?
 This implementation is a port of the C library xz-embedded to rust.
 
-Only features present in xz-embedded are present in this implementation.
-
 This implementation has the same limitations as xz-embedded (3GiB dictionary size)
 
 A memory allocator is optional for this implementation.
 
 The C code of xz-embedded has been translated using c2rust and
 then manually refactored until no unsafe code remained and the rust code looked sane.
+
+After porting to Rust some features present in other xz decoder implementations have been implemented on top of
+the ported rust code. Such as support for filter chains and the delta filter.
 
 ## License
 The rust source code in this project is released under the MIT License.

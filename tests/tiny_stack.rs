@@ -1,6 +1,6 @@
 use std::io::Read;
 use std::thread;
-use xz4rust::XzReader;
+use xz4rust::{XzDecoder, XzReader};
 
 #[test]
 fn test_tiny_stack() {
@@ -15,4 +15,10 @@ fn test_tiny_stack() {
         })
         .unwrap();
     r.join().unwrap();
+}
+
+#[test]
+fn test_docu_size_of_struct_is_okay() {
+    println!("{}", size_of::<XzDecoder>());
+    assert!(size_of::<XzDecoder>() < 40_000); //Documentation mentions that this struct is less than 40k. We should check this somewhere
 }

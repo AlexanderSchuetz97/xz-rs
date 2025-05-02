@@ -1,7 +1,5 @@
 use crate::clamp::{clamp_u32_to_u8, clamp_u64_to_u32, clamp_u64_to_u8, clamp_us_to_u32};
-use crate::decoder::{
-    DecodeResult, XzDictBuffer, XzError, XzInOutBuffer,
-};
+use crate::decoder::{DecodeResult, XzDictBuffer, XzError, XzInOutBuffer};
 
 /// State for decoding the bcj filter.
 /// Only used when bcj is enabled in the stream header

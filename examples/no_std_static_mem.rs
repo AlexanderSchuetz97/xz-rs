@@ -1,12 +1,12 @@
 use spin::mutex::SpinMutex;
 use xz4rust::{XzNextBlockResult, XzStaticDecoder};
 
-// 65536 is the size of the dictionary!
-// This entire variable is about 100k in size, which will be placed in your binary.
-// If you are willing to use unsafe code then you can also use zeroed memory.
-// This will work as long as you reset the decoder before using it.
-// In this case we use no unsafe code and just accept that the binary gets bigger.
-static DECODER: SpinMutex<XzStaticDecoder<65536>> = SpinMutex::new(XzStaticDecoder::new());
+// DICT_SIZE_PROFILE_0 is the size of the dictionary in bytes! It has a direct impact on the size of the variable.
+// In this configuration this entire variable is about 300k in size, which will be placed in your binary.
+// If you are willing to use unsafe code then you should also be able to place it in zeroed memory. (if the linker permits)
+// In this example we use no unsafe code and just accept that the binary gets bigger.
+static DECODER: SpinMutex<XzStaticDecoder<{ xz4rust::DICT_SIZE_PROFILE_0 }>> =
+    SpinMutex::new(XzStaticDecoder::new());
 fn main() {
     //This file contains Hello\nWorld!
     let compressed_data = include_bytes!("../test_files/good-1-block_header-1.xz");

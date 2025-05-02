@@ -6,7 +6,7 @@ fn main() {
     //This file contains Hello\nWorld!
     let compressed_data = include_bytes!("../test_files/good-1-block_header-1.xz");
     // The size of the dictionary depends on the input file, this one has a 64kib dictionary.
-    // If you use xz-utils you can set the dict size when encoding.
+    // If you use xz-utils, you can set the dict size when encoding.
     // The largest preset in xz-utils (-9) uses a 65mb dictionary.
     // Using a dictionary that is too small will cause an err when decoding.
     // Note: You may have to move this off the stack to the heap or static memory if this becomes too large for your stack.
@@ -24,7 +24,7 @@ fn main() {
                 input_position += input_consumed;
                 if output_produced > 0 {
                     // Note: We know this input file contains only ascii characters
-                    // and no multi byte which might be split at the edge of a buffer!
+                    // and no multibyte which might be split at the edge of a buffer!
                     print!(
                         "{}",
                         std::str::from_utf8(&decompressed_data_buffer[..output_produced]).unwrap()
@@ -34,7 +34,7 @@ fn main() {
             Ok(XzNextBlockResult::EndOfStream(_, output_produced)) => {
                 if output_produced > 0 {
                     // Note: We know this input file contains only ascii characters
-                    // and no multi byte which might be split at the edge of a buffer!
+                    // and no multibyte which might be split at the edge of a buffer!
                     print!(
                         "{}",
                         std::str::from_utf8(&decompressed_data_buffer[..output_produced]).unwrap()

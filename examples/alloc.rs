@@ -5,8 +5,9 @@ fn main() {
     let compressed_data = include_bytes!("../test_files/good-1-block_header-1.xz");
     let mut decompressed_data = Vec::new();
 
-    let initial_alloc_size = 4096;
-    let max_alloc_size = 0x10000;
+    let initial_alloc_size = xz4rust::DICT_SIZE_MIN;
+    //Note: This is 3GB, decide yourself if you want the decoder to allocate this much memory if the possibly untrustworthy input file requires it.
+    let max_alloc_size = xz4rust::DICT_SIZE_MAX;
     let mut decoder = XzDecoder::in_heap_with_alloc_dict_size(initial_alloc_size, max_alloc_size);
 
     let mut input_position = 0usize;

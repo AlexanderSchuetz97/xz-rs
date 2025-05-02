@@ -26,14 +26,25 @@ pub struct XzReader<R: Read + 'static> {
 
 impl<R: Read> XzReader<R> {
     /// Creates a new instance of `XzReader`
+    /// This reader will heap allocate an internal 8k io buffer to read from R.
+    /// This reader will allocate up to about 3GB of additional memory in heap for the lzma dictionary
+    /// depending on the input file.
+    ///
+    /// If you require more granular control, then use
+    /// `new_with_buffer_size_and_decoder` combined with
+    /// `XzDecoder::in_heap_with_alloc_dict_size`
     #[allow(clippy::missing_panics_doc)] //We never actually panic.
+    #[must_use]
     pub fn new(r: R) -> Self {
         Self::new_with_buffer_size(r, NonZeroUsize::new(8192).expect("Impossible to fail"))
     }
+
+    #[must_use]
     pub fn new_with_buffer_size(r: R, buffer_size: NonZeroUsize) -> Self {
         Self::new_with_buffer_size_and_decoder(r, buffer_size, XzDecoder::in_heap())
     }
 
+    #[must_use]
     pub fn new_with_buffer_size_and_decoder(
         r: R,
         buffer_size: NonZeroUsize,
@@ -49,6 +60,7 @@ impl<R: Read> XzReader<R> {
         }
     }
 
+    #[must_use]
     pub fn new_with_existing_buffered_data(
         r: R,
         buffer_size: NonZeroUsize,
@@ -62,6 +74,7 @@ impl<R: Read> XzReader<R> {
         )
     }
 
+    #[must_use]
     pub fn new_with_existing_buffered_data_and_decoder(
         r: R,
         buffer_size: NonZeroUsize,
@@ -86,6 +99,7 @@ impl<R: Read> XzReader<R> {
     }
 
     /// Returns true if the xz stream is end of a valid xz stream.
+    #[must_use]
     pub const fn is_eos(&self) -> bool {
         self.eos
     }
@@ -142,6 +156,7 @@ impl<R: Read> XzReader<R> {
 
     /// Returns the underlying reader as well as the (possibly empty)
     /// buffer that may contain some unprocessed data.
+    #[must_use]
     pub fn into_inner(mut self) -> (R, Vec<u8>) {
         debug_assert!(self.buffer_fill_count >= self.buffer_consumed);
         if self.buffer_consumed != 0 {
