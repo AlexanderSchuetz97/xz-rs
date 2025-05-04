@@ -606,7 +606,7 @@ impl XzLzma2Decoder {
             .bittree_reverse(probs, self.lzma.rep0, 4i32 as u32, rcb);
     }
 
-    /// Get index to literal coder probability array.
+    /// Get index to the literal coder probability array.
     fn lzma_literal_probs(&self, d: &mut XzDictBuffer) -> usize {
         // Should always hold true.
         debug_assert!(self.lzma.lc <= 8);
@@ -1170,9 +1170,14 @@ impl RcDecoder {
     fn rc_bit(&mut self, prob: &mut u16, rcb: &mut RcBuf) -> bool {
         self.normalize(rcb);
         let p = u32::from(*prob);
+        // Info from Mr Collin: "The 16-bit probability variables stay within the range [31, 2017]"
+        debug_assert!(p >= 31);
+        debug_assert!(p <= 2017);
 
-        //TODO unsure if wrapping needed. Type bounds (u32 >> 11) * u16 require wrapping!
-        let bound = (self.range >> 11).wrapping_mul(p);
+        // as long as the debug_assert's are true, this cannot wrap.
+        // (4,294,967,295 >> 11) * 2017 = 4,229,953,567 which is less than 4,294,967,295 (u32::MAX)
+        let bound = (self.range >> 11) * p;
+
         if self.code < bound {
             self.range = bound;
             *prob = clamp_u32_to_u16(p + ((((1u32) << 11) - p) >> 5));
