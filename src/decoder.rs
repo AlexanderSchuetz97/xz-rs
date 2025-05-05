@@ -286,38 +286,41 @@ impl XzLzma2Decoder {
 
     /// call the lzma2 decoder.
     fn lzma2_lzma(&mut self, b: &mut XzInOutBuffer, d: &mut XzDictBuffer) -> Result<(), XzError> {
-        let mut in_avail = b.in_size().wrapping_sub(b.input_pos);
         if self.temp_size > 0 || self.compressed == 0 {
-            //TODO unreached.
-            let tmplen = 42usize
-                .wrapping_sub(self.temp_size)
-                .min(self.compressed.wrapping_sub(self.temp_size))
-                .min(in_avail);
-            let target = &mut self.temp_buf.as_mut_slice()[self.temp_size..self.temp_size + tmplen];
-            let source = &b.input_slice()[..tmplen];
-            target.copy_from_slice(source);
-            let limit; //TODO inline this somehow
-            if self.temp_size.wrapping_add(tmplen) == self.compressed {
-                let index = self.temp_size + tmplen;
-                let len = size_of::<[u8; 63]>()
-                    .wrapping_sub(self.temp_size)
-                    .wrapping_sub(tmplen);
+            let mut amount_of_data_to_process = (42 - self.temp_size)
+                .min(b.input_remaining());
 
-                debug_assert!(len <= 63);
-                debug_assert!(index < 63);
-                debug_assert!(index + len <= 63);
-                self.temp_buf[index..index + len].fill(0);
-
-                limit = self.temp_size.wrapping_add(tmplen);
-            } else if self.temp_size.wrapping_add(tmplen) < 21 {
-                self.temp_size = self.temp_size.wrapping_add(tmplen);
-                b.input_pos = b.input_pos.wrapping_add(tmplen);
-                return Ok(());
-            } else {
-                limit = self.temp_size.wrapping_add(tmplen).wrapping_sub(21);
+            if let Some(sub) = self.compressed.checked_sub(self.temp_size) {
+                amount_of_data_to_process = amount_of_data_to_process.min(sub);
             }
 
-            let cl = self.temp_buf;
+            let target = &mut self.temp_buf.as_mut_slice()[self.temp_size..self.temp_size + amount_of_data_to_process];
+            let source = &b.input_slice()[..amount_of_data_to_process];
+
+            target.copy_from_slice(source);
+            let new_len = self.temp_size + amount_of_data_to_process;
+
+            if new_len < 21 && new_len != self.compressed {
+                //Not enough data to make progress.
+                self.temp_size += amount_of_data_to_process;
+                b.input_seek_add(amount_of_data_to_process);
+                return Ok(());
+            }
+
+            let limit = if new_len == self.compressed {
+                let len = self.temp_buf.len() - self.temp_size - amount_of_data_to_process;
+
+                debug_assert!(len <= 63);
+                debug_assert!(new_len < 63);
+                debug_assert!(new_len + len <= 63);
+
+                self.temp_buf[new_len..new_len + len].fill(0);
+                new_len
+            } else {
+                new_len - 21
+            };
+
+            let cl = self.temp_buf; //TODO get rid of this copy by outsmarting borrow checker at some point.
             let mut rcb = RcBuf {
                 input: cl.as_slice(),
                 in_pos: 0,
@@ -325,22 +328,22 @@ impl XzLzma2Decoder {
             };
 
             self.lzma_main(&mut rcb, d)?;
-            if rcb.in_pos > self.temp_size.wrapping_add(tmplen) {
+            if rcb.in_pos > new_len {
                 //TODO unreached
                 return Err(XzError::CorruptedDataInLzma);
             }
-            self.compressed = self.compressed.wrapping_sub(rcb.in_pos);
+            self.compressed -= rcb.in_pos;
             if rcb.in_pos < self.temp_size {
-                self.temp_size = self.temp_size.wrapping_sub(rcb.in_pos);
+                self.temp_size -= rcb.in_pos;
                 self.temp_buf.copy_within(rcb.in_pos.., 0);
                 return Ok(());
             }
-            b.input_pos = b
-                .input_pos
-                .wrapping_add(rcb.in_pos.wrapping_sub(self.temp_size));
+
+            b.input_seek_add(rcb.in_pos.wrapping_sub(self.temp_size));
             self.temp_size = 0;
         }
-        in_avail = b.in_size().wrapping_sub(b.input_pos);
+
+        let mut in_avail = b.in_size().wrapping_sub(b.input_pos);
         if in_avail >= 21 {
             let mut rcb = RcBuf {
                 input: b.input,
@@ -351,6 +354,7 @@ impl XzLzma2Decoder {
             if in_avail >= self.compressed + 21 {
                 rcb.in_limit = b.input_pos + self.compressed;
             } else {
+                //TODO unreached
                 rcb.in_limit = b.in_size() - 21;
             }
 
@@ -365,9 +369,10 @@ impl XzLzma2Decoder {
             self.compressed = self.compressed.wrapping_sub(in_avail);
             b.input_pos = rcb.in_pos;
         }
-        in_avail = b.in_size().wrapping_sub(b.input_pos);
+        in_avail = b.input_remaining();
         if in_avail < 21 {
             if in_avail > self.compressed {
+                //TODO unreached
                 in_avail = self.compressed;
             }
 
@@ -472,6 +477,7 @@ impl XzLzma2Decoder {
                 LzmaStreamState::LzmaPrepare => {
                     //INFO not sure if relevant but c impl did check bounds of input here.
                     if self.compressed < 5 {
+                        //TODO unreached
                         return Err(XzError::CorruptedDataInLzma);
                     }
                     if !self.rc.read_init(b) {
@@ -710,6 +716,7 @@ impl XzLzma2Decoder {
     /// reset and Ok is returned.
     fn lzma_props(&mut self, mut props: u8) -> Result<(), XzError> {
         if props > 224 {
+            //TODO unreached
             return Err(XzError::LzmaPropertiesTooLarge);
         }
 
@@ -879,13 +886,7 @@ impl LzmaLenDecoder {
 
 impl Default for LzmaLenDecoder {
     fn default() -> Self {
-        Self {
-            choice: 0,
-            choice2: 0,
-            low: [[0; 8]; 16],
-            mid: [[0; 8]; 16],
-            high: [0; 256],
-        }
+        Self::new()
     }
 }
 
@@ -1410,6 +1411,7 @@ impl<'a> XzDictBuffer<'a> {
             back += 1;
 
             if back == self.buffer().len() {
+                //TODO unreached.
                 back = 0;
             }
             remaining = remaining.wrapping_sub(1);
@@ -1591,6 +1593,7 @@ impl<'a> XzDictBuffer<'a> {
         let remaining = self.dict_size - self.dict_pos;
 
         if remaining <= out_max {
+            //TODO unreached.
             self.dict_limit = self.dict_size;
             return;
         }
@@ -2340,11 +2343,11 @@ impl XzInnerDecoder {
         loop {
             let vli = match self.vli_decoder.decode(b.input_slice()) {
                 VliResult::Ok(vli, length) => {
-                    b.input_pos += length;
+                    b.input_seek_add(length);
                     vli
                 }
                 VliResult::MoreDataNeeded(length) => {
-                    b.input_pos += length;
+                    b.input_seek_add(length);
                     self.index_update(b, in_start);
                     return Ok(DecodeResult::NeedMoreData);
                 }
@@ -2416,7 +2419,7 @@ impl XzInnerDecoder {
         let expected_crc = u32::from_le_bytes(self.temp.remove_trailing_4bytes());
         let actual_crc = crc32(0, self.temp.buf());
         if actual_crc != expected_crc {
-            return Err(XzError::FooterCrc32Mismatch(actual_crc, expected_crc));
+            return Err(XzError::BlockHeaderCrc32Mismatch(actual_crc, expected_crc));
         }
 
         debug_assert_eq!(self.temp.pos, 0);
@@ -2424,6 +2427,7 @@ impl XzInnerDecoder {
 
         let mut pos = 2usize;
         if buf[1] & 0x3C != 0 {
+            //TODO unreached.
             return Err(XzError::UnsupportedBlockHeaderOption);
         }
         if buf[1] & 0x40 != 0 {
@@ -2457,6 +2461,7 @@ impl XzInnerDecoder {
                 if bcj {
                     self.filter_chain[i] = Filter::Bcj;
                     if self.temp.size.wrapping_sub(pos) < 2 {
+                        //TODO unreached.
                         return Err(XzError::BlockHeaderTooSmall);
                     }
                     let filter = buf[pos];
@@ -2487,11 +2492,13 @@ impl XzInnerDecoder {
             {
                 if delta {
                     if self.temp.size.wrapping_sub(pos) < 2 {
+                        //TODO unreached
                         return Err(XzError::BlockHeaderTooSmall);
                     }
                     pos += 1;
                     //length of "distance" we only support 1 byte distance aka 1 to 256
                     if buf[pos] != 1 {
+                        //TODO unreached
                         return Err(XzError::UnsupportedBlockHeaderOption);
                     }
                     pos += 1;
@@ -2518,7 +2525,7 @@ impl XzInnerDecoder {
                 }
             }
 
-            self.filter_chain[i] = Filter::Empty;
+            self.filter_chain[i] = Filter::Empty; //This should be unreachable!
         }
 
         for i in filter_count..self.filter_chain.len() {
@@ -2535,6 +2542,7 @@ impl XzInnerDecoder {
         pos += 1;
 
         if self.temp.buf[pos] != 0x1 {
+            //TODO unreached
             return Err(XzError::UnsupportedBlockHeaderOption);
         }
         pos += 1;
@@ -2679,7 +2687,7 @@ impl XzInnerDecoder {
     ) -> Result<DecodeResult, XzError> {
         // Note: in the C impl this used to write to global state, we use the stack here.
         // This was likely an attempt to save stack space in the C impl.
-        // Since this is not a priority of this implementation we just use local variables here.
+        // Since this is not a priority of this implementation, we just use local variables here.
         // It appears this is not needed since StreamStart state will overwrite the "state" again
         // and all state transitions until StreamStart did not use it.
         let in_start = b.input_position();
@@ -2721,38 +2729,39 @@ impl XzInnerDecoder {
             XzCheckType::None => (),
         }
 
-        if ret == DecodeResult::EndOfDataStructure {
-            if self.block_header.compressed != u64::MAX
-                && self.block_header.compressed != self.block.compressed
-            {
-                return Err(XzError::LessDataInBlockBodyThanHeaderIndicated);
-            }
-            if self.block_header.uncompressed != u64::MAX
-                && self.block_header.uncompressed != self.block.uncompressed
-            {
-                return Err(XzError::LessDataInBlockBodyThanHeaderIndicated);
-            }
-            self.block.hash.unpadded =
-                self.block.hash.unpadded.wrapping_add(
-                    (self.block_header.size as u64).wrapping_add(self.block.compressed),
-                );
-
-            self.block.hash.unpadded = self
-                .block
-                .hash
-                .unpadded
-                .wrapping_add(self.check_type.check_size() as u64);
-            self.block.hash.uncompressed = self
-                .block
-                .hash
-                .uncompressed
-                .wrapping_add(self.block.uncompressed);
-            self.block.hash.calculate_crc32();
-            self.block.count = self.block.count.wrapping_add(1);
-            return Ok(DecodeResult::EndOfDataStructure);
+        if ret != DecodeResult::EndOfDataStructure {
+            return Ok(ret);
         }
 
-        Ok(ret)
+        if self.block_header.compressed != u64::MAX
+            && self.block_header.compressed != self.block.compressed
+        {
+            return Err(XzError::LessDataInBlockBodyThanHeaderIndicated);
+        }
+        if self.block_header.uncompressed != u64::MAX
+            && self.block_header.uncompressed != self.block.uncompressed
+        {
+            //TODO unreached
+            return Err(XzError::LessDataInBlockBodyThanHeaderIndicated);
+        }
+        self.block.hash.unpadded =
+            self.block.hash.unpadded.wrapping_add(
+                (self.block_header.size as u64).wrapping_add(self.block.compressed),
+            );
+
+        self.block.hash.unpadded = self
+            .block
+            .hash
+            .unpadded
+            .wrapping_add(self.check_type.check_size() as u64);
+        self.block.hash.uncompressed = self
+            .block
+            .hash
+            .uncompressed
+            .wrapping_add(self.block.uncompressed);
+        self.block.hash.calculate_crc32();
+        self.block.count += 1;
+        Ok(DecodeResult::EndOfDataStructure)
     }
 
     /// main decoder loop
@@ -2930,6 +2939,7 @@ impl XzInnerDecoder {
                     self.state = XzDecoderState::EndOfStream;
                     return Ok(DecodeResult::EndOfDataStructure);
                 }
+                //TODO unreached, should be trivial to test.
                 XzDecoderState::EndOfStream => return Ok(DecodeResult::EndOfDataStructure),
             }
         }
@@ -2968,6 +2978,7 @@ impl XzInnerDecoder {
         d: &mut XzDictBuffer,
     ) -> Result<XzNextBlockResult, XzError> {
         if self.needs_reset {
+            //TODO unreached should be trivial to test.
             return Err(XzError::NeedsReset);
         }
         if input_data.is_empty() {
@@ -2981,6 +2992,7 @@ impl XzInnerDecoder {
         {
             DecodeResult::NeedMoreData => {
                 if self.should_buffer_error(&buf) {
+                    //TODO unreached should be trivial to test.
                     return Err(XzError::NeedsLargerInputBuffer);
                 }
 
@@ -3018,6 +3030,7 @@ impl XzInnerDecoder {
         }
 
         if buf[7] > 15 {
+            //TODO unreached.
             return Err(XzError::UnsupportedStreamHeaderOption);
         }
 
@@ -3147,11 +3160,7 @@ impl XzTempBuffer {
 
 impl Default for XzTempBuffer {
     fn default() -> Self {
-        Self {
-            pos: 0,
-            size: 0,
-            buf: [0; 1024],
-        }
+        Self::new()
     }
 }
 

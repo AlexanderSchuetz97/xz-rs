@@ -389,7 +389,7 @@ fn t33() {
     );
     run_test_expect_error(
         include_bytes!("../test_files/bad-1-block_header-3.xz"),
-        |e| assert_eq!(e, XzError::FooterCrc32Mismatch(321064920, 857935832)),
+        |e| assert_eq!(e, XzError::BlockHeaderCrc32Mismatch(321064920, 857935832)),
     );
     run_test_expect_error(
         include_bytes!("../test_files/bad-1-block_header-4.xz"),
@@ -662,3 +662,20 @@ fn t52() {
         include_bytes!("../test_files/rand312"),
     );
 }
+
+#[test]
+fn t53() {
+    run_test_expect_error(
+        include_bytes!("../test_files/bad-dict-props.xz"),
+        |e| assert_eq!(e, XzError::UnsupportedLzmaProperties(105)),
+    );
+}
+
+#[test]
+fn t54() {
+    run_test_expect_error(
+        include_bytes!("../test_files/bad-2-lzma2-bad-vli-in-index.xz"),
+        |e| assert_eq!(e, XzError::CorruptedDataInBlockIndex),
+    );
+}
+
