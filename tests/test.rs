@@ -665,10 +665,9 @@ fn t52() {
 
 #[test]
 fn t53() {
-    run_test_expect_error(
-        include_bytes!("../test_files/bad-dict-props.xz"),
-        |e| assert_eq!(e, XzError::UnsupportedLzmaProperties(105)),
-    );
+    run_test_expect_error(include_bytes!("../test_files/bad-dict-props.xz"), |e| {
+        assert_eq!(e, XzError::UnsupportedLzmaProperties(105))
+    });
 }
 
 #[test]
@@ -678,4 +677,3 @@ fn t54() {
         |e| assert_eq!(e, XzError::CorruptedDataInBlockIndex),
     );
 }
-

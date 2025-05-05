@@ -6,7 +6,7 @@ pub fn test_no_buf() {
     let exp = include_bytes!("../test_files/java_native_utils_riscv64.so");
 
     let mut out_vec = Vec::new();
-    out_vec.resize(exp.len()-1, 0);
+    out_vec.resize(exp.len() - 1, 0);
     let mut s2 = out_vec.as_mut_slice();
 
     let mut n = XzDecoder::default();
@@ -27,8 +27,7 @@ pub fn test_no_buf() {
                 break;
             }
         }
-
     }
 
-    assert_eq!(out_vec.as_slice(), &exp[..exp.len()-1]);
+    assert_eq!(out_vec.as_slice(), &exp[..exp.len() - 1]);
 }

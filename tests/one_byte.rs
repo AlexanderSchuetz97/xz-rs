@@ -8,7 +8,10 @@ fn one_byte_output() {
     let mut sl = data.as_slice();
     loop {
         let mut buf = [0];
-        match dec.decode(sl, buf.as_mut_slice()).expect("failed to decode") {
+        match dec
+            .decode(sl, buf.as_mut_slice())
+            .expect("failed to decode")
+        {
             XzNextBlockResult::NeedMoreData(inp, outp) => {
                 sl = &sl[inp..];
                 if outp != 0 {
@@ -38,7 +41,10 @@ fn one_byte_input_output() {
     let mut sl = data.as_slice();
     loop {
         let mut buf = [0];
-        match dec.decode(&sl[..1], buf.as_mut_slice()).expect("failed to decode") {
+        match dec
+            .decode(&sl[..1], buf.as_mut_slice())
+            .expect("failed to decode")
+        {
             XzNextBlockResult::NeedMoreData(inp, outp) => {
                 sl = &sl[inp..];
                 if outp != 0 {
@@ -70,13 +76,16 @@ fn one_byte_input() {
     let mut out_pos = 0;
     let mut sl = data.as_slice();
     loop {
-        match dec.decode(&sl[..1], &mut out.as_mut_slice()[out_pos..]).expect("failed to decode") {
+        match dec
+            .decode(&sl[..1], &mut out.as_mut_slice()[out_pos..])
+            .expect("failed to decode")
+        {
             XzNextBlockResult::NeedMoreData(inp, outp) => {
                 sl = &sl[inp..];
-                out_pos+=outp;
+                out_pos += outp;
             }
             XzNextBlockResult::EndOfStream(_, outp) => {
-                out_pos+=outp;
+                out_pos += outp;
                 out.truncate(out_pos);
                 break;
             }
@@ -85,7 +94,6 @@ fn one_byte_input() {
 
     assert_eq!(out.as_slice(), expect.as_slice());
 }
-
 
 #[test]
 fn one_byte_input_output_bad() {

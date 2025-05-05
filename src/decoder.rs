@@ -287,14 +287,14 @@ impl XzLzma2Decoder {
     /// call the lzma2 decoder.
     fn lzma2_lzma(&mut self, b: &mut XzInOutBuffer, d: &mut XzDictBuffer) -> Result<(), XzError> {
         if self.temp_size > 0 || self.compressed == 0 {
-            let mut amount_of_data_to_process = (42 - self.temp_size)
-                .min(b.input_remaining());
+            let mut amount_of_data_to_process = (42 - self.temp_size).min(b.input_remaining());
 
             if let Some(sub) = self.compressed.checked_sub(self.temp_size) {
                 amount_of_data_to_process = amount_of_data_to_process.min(sub);
             }
 
-            let target = &mut self.temp_buf.as_mut_slice()[self.temp_size..self.temp_size + amount_of_data_to_process];
+            let target = &mut self.temp_buf.as_mut_slice()
+                [self.temp_size..self.temp_size + amount_of_data_to_process];
             let source = &b.input_slice()[..amount_of_data_to_process];
 
             target.copy_from_slice(source);
@@ -2744,10 +2744,11 @@ impl XzInnerDecoder {
             //TODO unreached
             return Err(XzError::LessDataInBlockBodyThanHeaderIndicated);
         }
-        self.block.hash.unpadded =
-            self.block.hash.unpadded.wrapping_add(
-                (self.block_header.size as u64).wrapping_add(self.block.compressed),
-            );
+        self.block.hash.unpadded = self
+            .block
+            .hash
+            .unpadded
+            .wrapping_add((self.block_header.size as u64).wrapping_add(self.block.compressed));
 
         self.block.hash.unpadded = self
             .block
