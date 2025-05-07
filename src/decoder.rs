@@ -354,7 +354,6 @@ impl XzLzma2Decoder {
             if in_avail >= self.compressed + 21 {
                 rcb.in_limit = b.input_pos + self.compressed;
             } else {
-                //TODO unreached
                 rcb.in_limit = b.in_size() - 21;
             }
 
@@ -372,7 +371,6 @@ impl XzLzma2Decoder {
         in_avail = b.input_remaining();
         if in_avail < 21 {
             if in_avail > self.compressed {
-                //TODO unreached
                 in_avail = self.compressed;
             }
 
@@ -716,7 +714,6 @@ impl XzLzma2Decoder {
     /// reset and Ok is returned.
     fn lzma_props(&mut self, mut props: u8) -> Result<(), XzError> {
         if props > 224 {
-            //TODO unreached
             return Err(XzError::LzmaPropertiesTooLarge);
         }
 
@@ -1626,8 +1623,6 @@ enum XzDecoderState {
     IndexCrc32,
     /// TODO
     StreamFooter,
-    /// TODO
-    EndOfStream,
 }
 
 #[derive(Debug, Default, Copy, Clone, Eq, PartialEq, Hash, PartialOrd, Ord)]
@@ -2169,7 +2164,7 @@ impl<'a> XzDecoder<'a> {
     ///
     /// The recommended minimum size of the output buffer is 256 bytes, the larger, the better.
     /// The input buffer should also be at least that size, the larger, the better.
-    /// However, obviously, at the end of the stream this is not possible/needed.
+    /// However, at the end of the stream this is not possible/needed.
     ///
     /// The decoder can be reused to decode multiple xz streams if "reset"
     /// is called after `XzNextBlockResult::EndOfStream` was returned.
@@ -2180,8 +2175,8 @@ impl<'a> XzDecoder<'a> {
     /// The caller will have to skip all 0 bytes between such streams.
     ///
     /// # Errors
-    /// Most errors returned by this fn are fatal and the decoder must be reset afterward.
-    /// If decode is called again when the decoder had a fatal error then it will cause an Err with `XzError::NeedsReset`.
+    /// Most errors returned by this fn are fatal, and the decoder must be reset afterward.
+    /// If decode is called again when the decoder had a fatal error, then it will cause an Err with `XzError::NeedsReset`.
     /// The only errors that are not fatal are:
     /// - `XzError::NeedsLargerInputBuffer`
     ///     - Input buffer does not contain enough data to make progress
@@ -2229,8 +2224,6 @@ pub struct XzInnerDecoder {
     state: XzDecoderState,
     /// check algorithm to use
     check_type: XzCheckType,
-    /// TODO remove this only needed by crc32/crc64 check that I want to re-implement anyways...
-    pos: usize,
     /// VLI decoder
     vli_decoder: VliDecoder,
     /// Crc32 and Crc64 state
@@ -2273,7 +2266,6 @@ pub struct XzInnerDecoder {
     ///Delta decoder state
     #[cfg(feature = "delta")]
     delta2: DeltaDecoder,
-
     /// sha256 state
     #[cfg(feature = "sha256")]
     sha256: XzSha256,
@@ -2290,7 +2282,6 @@ impl XzInnerDecoder {
     pub const fn new() -> Self {
         Self {
             state: XzDecoderState::StreamHeader,
-            pos: 0,
             vli_decoder: VliDecoder::new(),
             crc: 0,
             check_type: XzCheckType::None,
@@ -2413,7 +2404,7 @@ impl XzInnerDecoder {
     /// decodes a block header from the stream.
     #[allow(clippy::too_many_lines)] //Todo re-implement this function with some sort of borrowed cursor and split it into sections that make sense.
     fn dec_block_header(&mut self, d: &mut XzDictBuffer) -> Result<(), XzError> {
-        //the temp buffer size is determined by the block header size which should be at least 8 even with a malicious input file.
+        //the temp buffer size is determined by the block header size, which should be at least 8 even with a malicious input file.
         debug_assert!(self.temp.size >= 8);
 
         let expected_crc = u32::from_le_bytes(self.temp.remove_trailing_4bytes());
@@ -2937,11 +2928,8 @@ impl XzInnerDecoder {
                         return Ok(DecodeResult::NeedMoreData);
                     }
                     self.dec_stream_footer()?;
-                    self.state = XzDecoderState::EndOfStream;
                     return Ok(DecodeResult::EndOfDataStructure);
                 }
-                //TODO unreached, should be trivial to test.
-                XzDecoderState::EndOfStream => return Ok(DecodeResult::EndOfDataStructure),
             }
         }
     }
@@ -2979,7 +2967,6 @@ impl XzInnerDecoder {
         d: &mut XzDictBuffer,
     ) -> Result<XzNextBlockResult, XzError> {
         if self.needs_reset {
-            //TODO unreached should be trivial to test.
             return Err(XzError::NeedsReset);
         }
         if input_data.is_empty() {
@@ -2993,7 +2980,6 @@ impl XzInnerDecoder {
         {
             DecodeResult::NeedMoreData => {
                 if self.should_buffer_error(&buf) {
-                    //TODO unreached should be trivial to test.
                     return Err(XzError::NeedsLargerInputBuffer);
                 }
 
@@ -3031,7 +3017,6 @@ impl XzInnerDecoder {
         }
 
         if buf[7] > 15 {
-            //TODO unreached.
             return Err(XzError::UnsupportedStreamHeaderOption);
         }
 
@@ -3047,7 +3032,6 @@ impl XzInnerDecoder {
         self.last_output_buffer_size = 0;
         self.last_input_buffer_size = 0;
         self.vli_decoder.reset();
-        self.pos = 0;
         self.crc = 0;
         self.block.reset();
         self.index.reset();

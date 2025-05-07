@@ -30,6 +30,7 @@ cargo test --release --target i686-pc-windows-gnu
 
 #Miri
 cargo +nightly miri test --package xz4rust --test tiny_stack test_tiny_stack -- --exact
+cargo +nightly miri test --package xz4rust --test test_static_uninit test_static_uninit -- --exact
 
 # Verify minimum rust version works
 cargo msrv verify

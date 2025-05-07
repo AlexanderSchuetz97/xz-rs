@@ -7,8 +7,8 @@ use crate::decoder::{DecodeResult, XzDictBuffer, XzError, XzInOutBuffer};
 pub struct BcjFilterState {
     ///Filter type that we are currently using.
     bcj_filter_type: BcjFilter,
-    /// flag if the lzma decoder is done.
-    pub lzma_done: bool,
+    /// flag if the next filter (probably the lzma decoder) is done.
+    pub next_filter_done: bool,
     /// position marker that bcj filters use during filtering.
     pub pos: u32,
     /// special mask marker by the x86 bcj filter. Unused by all other filters.
@@ -26,7 +26,7 @@ impl BcjFilterState {
     pub const fn new() -> Self {
         Self {
             bcj_filter_type: BcjFilter::X86,
-            lzma_done: false,
+            next_filter_done: false,
             pos: 0,
             x86_prev_mask: 0,
             filtered: 0,
@@ -37,12 +37,12 @@ impl BcjFilterState {
 
     /// Returns true if the filter is done.
     const fn is_done(&self) -> bool {
-        self.lzma_done
+        self.next_filter_done
     }
 
     /// Marks the filter as done.
     const fn set_done(&mut self) {
-        self.lzma_done = true;
+        self.next_filter_done = true;
     }
 
     /// Resets/Initializes the filter for the given filter type directly from the xz stream header.
@@ -50,7 +50,7 @@ impl BcjFilterState {
     /// if the filter type with the given id is not supported by the implementation.
     pub fn reset(&mut self, id: u8) -> Result<(), XzError> {
         self.bcj_filter_type = BcjFilter::try_from(id)?;
-        self.lzma_done = false;
+        self.next_filter_done = false;
         self.pos = 0;
         self.x86_prev_mask = 0;
         self.filtered = 0;

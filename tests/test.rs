@@ -120,6 +120,8 @@ fn run_test_expect_error<T: Fn(XzError)>(mut data: &[u8], checker: T) {
                 }
             }
             Err(err) => {
+                assert_ne!("", format!("{}", &err).as_str());
+                assert_ne!("", format!("{:?}", &err).as_str());
                 checker(err);
                 return;
             }
@@ -675,5 +677,21 @@ fn t54() {
     run_test_expect_error(
         include_bytes!("../test_files/bad-2-lzma2-bad-vli-in-index.xz"),
         |e| assert_eq!(e, XzError::CorruptedDataInBlockIndex),
+    );
+}
+
+#[test]
+fn t55() {
+    run_test_expect_error(
+        include_bytes!("../test_files/bad-byte7-stream-header.xz"),
+        |e| assert_eq!(e, XzError::UnsupportedStreamHeaderOption),
+    );
+}
+
+#[test]
+fn t56() {
+    run_test_expect_error(
+        include_bytes!("../test_files/bad-lzma-properties-too-large.xz"),
+        |e| assert_eq!(e, XzError::LzmaPropertiesTooLarge),
     );
 }
